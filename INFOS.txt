@@ -1,0 +1,88 @@
+# ============================================================
+#  OPENCHAT — TOUTES LES INFORMATIONS (lis-moi en premier)
+# ============================================================
+# Projet : OpenChat v1.1.0 — alternative open-source a Chatiw
+# Dossier : C:\Users\jacob\projects\openchat
+# Serveur : Node.js SANS AUCUNE DEPENDANCE (node:http + crypto natifs)
+# ============================================================
+
+## 1. CE QUI A ETE FAIT (comme Chatiw + bugs corriges)
+- [x] Liste des gens connectes PAR PAYS (barre laterale, groupes + compteurs,
+      filtre pseudo/pays, pastille dispo/en-chat). Protocole : {type:"user_list"}.
+- [x] Clic sur un utilisateur = chat prive DIRECT (start_private), sans passer
+      par l'appariement aleatoire.
+- [x] Historique de discussion de la SESSION (onglet Historique) qui se PERD
+      quand on deconnecte/Quitter, exactement comme Chatiw.
+- [x] BUG RECONNEXION CORRIGE :
+      - Cause 1 (client) : garde `state.ws` mort bloquait tout redemarrage ;
+        `connect()` jette maintenant les sockets CLOSED/CLOSING avant d'en creer.
+      - Cause 2 (serveur) : limiteur 5 connexions/IP/minute + bouton bloque ;
+        porte a 30 + bouton re-active sur 'waiting'/'idle'/'error'.
+      - Test auto : leave -> re-join sur MEME socket + destroy -> reconnect OK.
+- [x] Champ PAYS au formulaire (France, Belgique, Maroc, Algerie...) repris dans
+      l'appariement + la liste en ligne + meta du pair.
+- [x] 23/23 tests automatises OK (node test/run.js).
+- [x] Site teste sur TON PC : serveur lance sur port 3000, /healthz = 200,
+      / + /app.js + /style.css + /config.js + /manifest + /robots = 200,
+      2 onglets navigateur ouverts (localhost + 192.168.1.36) pour essai manuel.
+
+## 2. COMMENT LANCER / TESTER EN LOCAL (Windows)
+- Double-clic : start-public.bat  (serveur + tunnel public auto)
+- Manuel :
+    cd C:\Users\jacob\projects\openchat
+    node server.js
+    -> http://localhost:3000  (ce PC)
+    -> http://192.168.1.36:3000  (tel/PC du reseau Wi-Fi)
+    -> sante : http://localhost:3000/healthz
+- Tests auto :  node test/run.js   (attendu : ALL 23 TESTS PASSED)
+- Test manuel guide : voir TEST-MANUEL.txt (9 etapes navigateur).
+
+## 3. DEPLOIEMENT GRATUIT PERMANENT (sans ton PC allume)
+### Option A — Render.com (recommande, 100% gratuit, HTTPS auto)
+1. Cree un compte https://render.com + depose ce dossier sur GitHub :
+     cd C:\Users\jacob\projects\openchat
+     gh repo create openchat --public --source=. --push   (ou via le site GitHub)
+2. Render > New+ > Web Service > connecte le repo openchat :
+   Build Command : (vide) | Start Command : node server.js | Plan : Free
+   Le fichier render.yaml fait deja tout (health check /healthz).
+3. URL finale : https://openchat.onrender.com (gratis, HTTPS + WSS).
+### Option B — Railway.app : New Project > Deploy from GitHub > Start: node server.js
+### Option C — Fly.io : fly launch --region cdg ; fly deploy (fly.toml + Dockerfile fournis)
+### Option D — Koyeb.com : Service > GitHub > Run: node server.js, Port 3000
+### Option E — Tunnel instantane depuis ton PC (gratuit, 30 sec, parfait pour tester) :
+    cloudflared tunnel --url http://localhost:3000
+    => https://xxxx.trycloudflare.com (HTTPS + WSS, SANS mot de passe, SANS compte)
+    (start-public.bat le fait automatiquement ; repli : lt --port 3000)
+
+## 4. DEPLOIEMENT AUTOMATIQUE (CI/CD, zero clic)
+- GitHub Actions fourni : .github/workflows/deploy.yml
+  A chaque `git push` sur master : syntax-check + 23 tests + (si secrets
+  RENDER_DEPLOY_HOOK / FLY_API_TOKEN renseignes) redeploiement auto.
+- Secrets a ajouter sur GitHub > Settings > Secrets :
+  RENDER_DEPLOY_HOOK = URL du Deploy Hook Render (Service > Settings)
+  FLY_API_TOKEN = `fly auth token`
+- Sans secrets, le workflow valide au moins que rien n'est casse.
+
+## 5. MONETISATION (tout est pret, remplace juste les liens)
+- Fichier : public/config.js (objet OPENCHAT_CONFIG) + banniere VIP dans index.html
+- A personnaliser :
+    support.kofiUrl/paypalUrl -> tes liens Ko-fi / PayPal.Me / Tipeee
+    affiliate.vpnUrl/hostingUrl -> tes liens d'affiliation (NordVPN 40-100%,
+      Hostinger, etc.) | ads.* / analytics.* -> Ezoic/Mediavine/Plausible
+- Idees de revenus : VIP Supporter 2,99 EUR/mois (badge + priorite file),
+  affiliation VPN/hebergeur, display Ezoic des 10k visites/mois, Stripe Payment Links.
+- Legal : page 16+, bouton Signaler/Bloquer + bannissement IP 10 min deja en place.
+
+## 6. FICHIERS CLES
+server.js, public/index.html, public/app.js, public/style.css, public/config.js,
+test/run.js, Dockerfile, docker-compose.yml, render.yaml, fly.toml,
+.github/workflows/deploy.yml, start-public.bat, TEST-MANUEL.txt, INFOS.txt (ce fichier).
+
+## 7. DEPANNAGE EXPRESS
+- "Impossible de se reconnecter" : F5,Vide le cache, verifie /healthz ; le bug est
+  corrige mais un F5 force toujours un socket neuf.
+- Port 3000 occupe : netstat -ano | findstr :3000 puis Stop-Process -Id <pid>
+- Tunnel Localtunnel = page de rappel : prefere cloudflared (start-public.bat).
+- WSS casse derriere un proxy : le serveur lit l'IP du socket direct ; derriere
+  Render/Railway ajoute `app.set('trust proxy')` equiv. (ici: utiliser l'en-tete
+  X-Forwarded-For si tu ajoutes un reverse-proxy).

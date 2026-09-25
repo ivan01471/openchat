@@ -1,0 +1,37 @@
+name: openchat CI + auto-deploy
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  check-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node --check server.js
+      - run: node --check public/app.js
+      - run: node --check public/config.js
+      - run: node test/run.js
+
+  deploy-render:
+    needs: check-and-test
+    if: github.event_name == 'push' && secrets.RENDER_DEPLOY_HOOK != ''
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+
+  deploy-fly:
+    needs: check-and-test
+    if: github.event_name == 'push' && secrets.FLY_API_TOKEN != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
