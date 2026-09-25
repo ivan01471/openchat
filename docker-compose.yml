@@ -1,0 +1,12 @@
+services:
+  openchat:
+    build: .
+    container_name: openchat
+    restart: unless-stopped
+    ports:
+      - "3000:8080"
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+      - MIN_AGE=16
+      - LIMIT_CONN_PER_IP=15
