@@ -1,0 +1,22 @@
+OpenChat v2 — test manuel du navigateur (a executer une fois le serveur lance)
+================================================================================
+1. Ouvre http://localhost:3000 dans Brave (fenetre normale).
+2. Formulaire : pseudo "Léa", age 22, genre Femme, pays France, coche les regles,
+   clique "Demarrer la recherche" => panneau chat + "Recherche d'un interlocuteur…".
+3. Ouvre une 2e fenetre (privee) : pseudo "Karim", age 26, pays Maroc,
+   clique demarrer => les 2 doivent afficher "Connecte a ..." (appariement auto).
+4. Envoie "Salut !" depuis Lea => doit apparaitre chez Karim et inversement.
+5. Dans la barre laterale "Connectes par pays", verifie les groupes France/Maroc.
+   Clique sur un utilisateur de la liste => chat prive direct (start_private).
+6. Onglet "Historique" : les conversations de la session s'affichent ;
+   clique une entree => re-affiche les messages.
+7. Bouton "Suivant" => nouvel appariement ; "Quitter" => retour au formulaire
+   + message "historique efface". Re-clique "Demarrer" => DOIT reconnecter
+   (c'etait le bug corrige : reconnexion impossible).
+8. F12 > Console : aucune erreur rouge ; F12 > Network > WS : trames JSON
+   {type:"user_list"}, {type:"matched"}, {type:"message"} visibles.
+9. Teste le tunnel public : lance start-public.bat, ouvre l'URL
+   https://xxxx.trycloudflare.com dans ton telephone (4G, pas le Wi-Fi)
+   et refais les etapes 2-4 avec 2 appareils.
+RESULTAT ATTENDU : 23/23 tests auto + les 9 etapes manuelles OK.
+En cas d'echec, copie la console (F12) + la reponse de /healthz.

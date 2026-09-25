@@ -1,0 +1,20 @@
+{
+  "$schema": "https://schema.render.com/render.yaml",
+  "services": [
+    {
+      "type": "web",
+      "name": "openchat",
+      "runtime": "node",
+      "plan": "free",
+      "buildCommand": "",
+      "startCommand": "node server.js",
+      "healthCheckPath": "/healthz",
+      "envVars": [
+        { "key": "NODE_ENV", "value": "production" },
+        { "key": "LIMIT_MIN_AGE", "value": 16 },
+        { "key": "LIMIT_CONN_PER_IP", "value": 30 },
+        { "key": "LIMIT_JOIN_PER_MIN", "value": 30 }
+      ]
+    }
+  ]
+}

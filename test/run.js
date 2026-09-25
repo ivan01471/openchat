@@ -383,6 +383,62 @@ async function main() {
     a.destroy(); b.destroy();
   });
 
+  console.log('\nChatiw Features (Country list, direct private chat, disconnect-reconnect)');
+
+  await test('connect, join, disconnect and reconnect cleanly without being blocked', async () => {
+    const a = new TestClient('ReconUser');
+    assert((await a.connect(PORT)).ok, 'First connect');
+    a.send({ type: 'join', nick: 'ReconNick', age: 25, gender: 'male', lookingFor: 'any', lang: 'fr', country: 'France' });
+    await a.waitFor((m) => m.type === 'waiting');
+    // Leave, then join again on the SAME socket = the real Chatiw scenario
+    a.send({ type: 'leave' });
+    await a.waitFor((m) => m.type === 'idle');
+    a.send({ type: 'join', nick: 'ReconNick', age: 25, gender: 'male', lookingFor: 'any', lang: 'fr', country: 'France' });
+    await a.waitFor((m) => m.type === 'joined' || m.type === 'waiting');
+    // Full socket disconnect then immediate reconnect
+    a.destroy();
+    await sleep(200);
+
+    const a2 = new TestClient('ReconUser2');
+    assert((await a2.connect(PORT)).ok, 'Second connect after disconnect');
+    a2.send({ type: 'join', nick: 'ReconNick', age: 25, gender: 'male', lookingFor: 'any', lang: 'fr', country: 'France' });
+    await a2.waitFor((m) => m.type === 'waiting');
+    a2.destroy();
+  });
+
+  await test('receives live user list with country information and supports direct private chat', async () => {
+    const a = new TestClient('UserFrance');
+    const b = new TestClient('UserCanada');
+    await a.connect(PORT);
+    await b.connect(PORT);
+
+    a.send({ type: 'join', nick: 'AliceFR', age: 22, gender: 'female', lookingFor: 'female', lang: 'fr', country: 'France' });
+    b.send({ type: 'join', nick: 'BobCA', age: 28, gender: 'male', lookingFor: 'male', lang: 'fr', country: 'Canada' });
+    
+    // Alice and Bob do not auto-match because of lookingFor filters (female vs male)
+    await a.waitFor((m) => m.type === 'waiting');
+    await b.waitFor((m) => m.type === 'waiting');
+
+    // Request active user list
+    a.send({ type: 'get_users' });
+    await a.waitFor((m) => m.type === 'user_list' && Array.isArray(m.users) && m.users.some(u => u.nick === 'BobCA'));
+    const allLists = a.messages.filter((m) => m.type === 'user_list');
+    const userListMsg = allLists.reverse().find(m => m.users.some(u => u.nick === 'BobCA'));
+    const bobInList = userListMsg.users.find(u => u.nick === 'BobCA');
+    assert(bobInList, 'BobCA should be in the user list');
+    assert(bobInList.country === 'Canada', `Expected Canada, got ${bobInList.country}`);
+
+    // Direct private chat: Alice clicks on Bob in the list
+    a.send({ type: 'start_private', targetId: bobInList.id });
+    await a.waitFor((m) => m.type === 'matched');
+    await b.waitFor((m) => m.type === 'matched');
+
+    assert(a.find((m) => m.type === 'matched').peer.nick === 'BobCA', 'Alice paired with BobCA');
+    assert(b.find((m) => m.type === 'matched').peer.nick === 'AliceFR', 'Bob paired with AliceFR');
+
+    a.destroy(); b.destroy();
+  });
+
   console.log('\nIsolated servers (ban + connection flood)');
 
   await test('reporting a partner bans their address', async () => {

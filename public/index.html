@@ -6,9 +6,14 @@
   <meta name="description" content="OpenChat — chat anonyme aléatoire gratuit, sans inscription, modéré. 16+">
   <meta name="referrer" content="no-referrer">
   <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#0d1117">
+  <meta property="og:title" content="OpenChat — chat anonyme aléatoire gratuit">
+  <meta property="og:description" content="Discute avec un inconnu en 10 secondes. Gratuit, anonyme, sans inscription, modéré. Liste en ligne par pays + historique de session.">
+  <meta property="og:type" content="website">
   <title>OpenChat — chat anonyme aléatoire</title>
   <link rel="stylesheet" href="/style.css">
   <link rel="icon" href="data:,">
+  <link rel="manifest" href="/manifest.webmanifest">
 </head>
 <body>
   <header class="topbar">
@@ -84,6 +89,28 @@
               <option value="ar">العربية</option>
             </select>
           </label>
+
+          <label class="field">
+            <span>Pays</span>
+            <select id="country" name="country">
+              <option value="France">France 🇫🇷</option>
+              <option value="Belgique">Belgique 🇧🇪</option>
+              <option value="Suisse">Suisse 🇨🇭</option>
+              <option value="Canada">Canada 🇨🇦</option>
+              <option value="Maroc">Maroc 🇲🇦</option>
+              <option value="Algérie">Algérie 🇩🇿</option>
+              <option value="Tunisie">Tunisie 🇹🇳</option>
+              <option value="Sénégal">Sénégal 🇸🇳</option>
+              <option value="Côte d'Ivoire">Côte d'Ivoire 🇨🇮</option>
+              <option value="USA">USA 🇺🇸</option>
+              <option value="UK">UK 🇬🇧</option>
+              <option value="Espagne">Espagne 🇪🇸</option>
+              <option value="Allemagne">Allemagne 🇩🇪</option>
+              <option value="Italie">Italie 🇮🇹</option>
+              <option value="Autre">Autre 🌍</option>
+            </select>
+            <small class="hint">Affiché dans la liste en ligne</small>
+          </label>
         </div>
 
         <label class="check">
@@ -106,32 +133,69 @@
     </section>
 
     <!-- ================= CHAT ================= -->
-    <section class="panel chat" id="chatPanel" hidden>
-      <div class="peer-bar">
-        <div class="peer" id="peerInfo">
-          <span class="peer-avatar" id="peerAvatar" aria-hidden="true">?</span>
-          <span class="peer-text">
-            <strong id="peerNick">Inconnu</strong>
-            <small id="peerMeta">en attente…</small>
-          </span>
+    <section class="panel chat-workspace" id="chatPanel" hidden>
+      <!-- Sidebar / Online users by country (Chatiw style) -->
+      <aside class="chat-sidebar" id="chatSidebar">
+        <div class="sidebar-header">
+          <h3>Connectés par pays</h3>
+          <input type="text" id="userSearch" placeholder="Filtrer par pays / pseudo…" class="search-input">
         </div>
-        <div class="peer-actions">
-          <button type="button" class="btn btn-warn" id="reportBtn" title="Signaler cet utilisateur">Signaler</button>
-          <button type="button" class="btn btn-ghost" id="blockBtn" title="Bloquer et changer">Bloquer</button>
-          <button type="button" class="btn btn-primary" id="nextBtn" title="Passer au suivant">Suivant</button>
+        <div class="user-list-tabs">
+          <button type="button" class="tab-btn active" id="tabUsers">Utilisateurs (<span id="userCount">0</span>)</button>
+          <button type="button" class="tab-btn" id="tabHistory">Historique (<span id="historyCount">0</span>)</button>
+        </div>
+        <div class="sidebar-body">
+          <div class="online-users-list" id="onlineUsersList">
+            <div class="list-empty">Chargement des utilisateurs en ligne…</div>
+          </div>
+          <div class="session-history-list" id="sessionHistoryList" hidden>
+            <div class="list-empty">Aucun historique dans cette session. L'historique s'efface quand vous vous déconnectez.</div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main conversation area -->
+      <div class="chat-main">
+        <div class="peer-bar">
+          <div class="peer" id="peerInfo">
+            <span class="peer-avatar" id="peerAvatar" aria-hidden="true">?</span>
+            <span class="peer-text">
+              <strong id="peerNick">Inconnu</strong>
+              <small id="peerMeta">en attente…</small>
+            </span>
+          </div>
+          <div class="peer-actions">
+            <button type="button" class="btn btn-warn" id="reportBtn" title="Signaler cet utilisateur">Signaler</button>
+            <button type="button" class="btn btn-ghost" id="blockBtn" title="Bloquer et changer">Bloquer</button>
+            <button type="button" class="btn btn-primary" id="nextBtn" title="Passer au suivant">Suivant</button>
+          </div>
+        </div>
+
+        <div class="messages" id="messages" role="log" aria-live="polite" aria-relevant="additions"></div>
+
+        <div class="typing" id="typing" hidden><span></span> écrit…</div>
+
+        <form class="composer" id="composerForm">
+          <input type="text" id="msgInput" autocomplete="off" maxlength="2000"
+                 placeholder="Écris ton message…" aria-label="Message">
+          <button type="submit" class="btn btn-primary" id="sendBtn">Envoyer</button>
+          <button type="button" class="btn btn-ghost" id="stopBtn" title="Quitter la discussion">Quitter</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ================= MONETIZATION BANNER ================= -->
+    <section class="monetize-card" id="monetizeCard">
+      <div class="monetize-inner">
+        <div class="monetize-badge">⭐ SOUTENIR LE PROJET / ESPACE PARTENAIRE</div>
+        <p class="monetize-text">
+          Discutez librement et en toute sécurité. Activez votre statut <strong>VIP Supporter</strong> ou découvrez les services recommandés sans abonnement.
+        </p>
+        <div class="monetize-actions">
+          <a href="https://ko-fi.com" target="_blank" rel="noopener noreferrer" class="btn btn-vip">⭐ Devenir VIP Supporter</a>
+          <a href="https://brave.com" target="_blank" rel="noopener noreferrer" class="btn btn-ghost">🛡️ Naviguer sécurisé</a>
         </div>
       </div>
-
-      <div class="messages" id="messages" role="log" aria-live="polite" aria-relevant="additions"></div>
-
-      <div class="typing" id="typing" hidden><span></span> écrit…</div>
-
-      <form class="composer" id="composerForm">
-        <input type="text" id="msgInput" autocomplete="off" maxlength="2000"
-               placeholder="Écris ton message…" aria-label="Message">
-        <button type="submit" class="btn btn-primary" id="sendBtn">Envoyer</button>
-        <button type="button" class="btn btn-ghost" id="stopBtn" title="Quitter la discussion">Quitter</button>
-      </form>
     </section>
 
     <!-- ================= RULES DIALOG ================= -->
@@ -158,4 +222,5 @@
     <span>Projet open source — modération active — aucune publicité</span>
   </footer>
 
+  <script src="/config.js" defer></script>
   <script src="/app.js" defer></script>

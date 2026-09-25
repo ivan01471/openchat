@@ -26,9 +26,9 @@ const LIMITS = {
   MAX_NICK_BYTES: envInt('LIMIT_MAX_NICK_BYTES', 24),
   MESSAGES_PER_WINDOW: envInt('LIMIT_MSG_PER_WINDOW', 5),
   RATE_WINDOW_MS: envInt('LIMIT_RATE_WINDOW_MS', 5000),
-  CONNECTIONS_PER_IP: envInt('LIMIT_CONN_PER_IP', 5),
+  CONNECTIONS_PER_IP: envInt('LIMIT_CONN_PER_IP', 30),
   CONNECTION_WINDOW_MS: 60_000,
-  CONNECTS_PER_IP_PER_MIN: envInt('LIMIT_JOIN_PER_MIN', 12),
+  CONNECTS_PER_IP_PER_MIN: envInt('LIMIT_JOIN_PER_MIN', 30),
   QUEUE_TIMEOUT_MS: envInt('LIMIT_QUEUE_TIMEOUT_MS', 60_000),
   MIN_AGE: envInt('LIMIT_MIN_AGE', 16),
   MAX_AGE: envInt('LIMIT_MAX_AGE', 99),
@@ -37,9 +37,10 @@ const LIMITS = {
 
 const SECURITY_HEADERS = {
   'Content-Security-Policy':
-    "default-src 'self'; script-src 'self'; style-src 'self'; " +
-    "img-src 'self' data:; connect-src 'self' ws: wss:; " +
-    "base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+    "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; " +
+    "img-src 'self' data: https:; font-src 'self' https: data:; connect-src 'self' ws: wss: https:; " +
+    "frame-src 'self' https:; " +
+    "base-uri 'none'; form-action 'none'",
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',
   'Referrer-Policy': 'no-referrer',
@@ -284,6 +285,7 @@ class Client {
     leaveQueue(this);
     unpair(this, 'gone');
     clients.delete(this);
+    broadcastUserList();
   }
 }
 
@@ -341,6 +343,34 @@ function pair(a, b) {
   b.queueSince = 0;
   a.send({ type: 'matched', peer: { nick: b.nick, gender: b.gender, age: b.age, country: b.country } });
   b.send({ type: 'matched', peer: { nick: a.nick, gender: a.gender, age: a.age, country: a.country } });
+  broadcastUserList();
+}
+
+function getPublicUserList() {
+  const users = [];
+  for (const c of clients) {
+    if (c.alive && c.nick) {
+      users.push({
+        id: c.id,
+        nick: c.nick,
+        age: c.age,
+        gender: c.gender,
+        country: c.country,
+        busy: !!c.partner,
+      });
+    }
+  }
+  return users;
+}
+
+function broadcastUserList() {
+  const users = getPublicUserList();
+  const payload = frame(json({ type: 'user_list', users }));
+  for (const c of clients) {
+    if (c.alive && !c.socket.destroyed) {
+      try { c.socket.write(payload); } catch { /* ignore */ }
+    }
+  }
 }
 
 /** Notify the remaining partner that the other side left. */
@@ -350,6 +380,7 @@ function unpair(client, reason) {
   client.partner = null;
   p.partner = null;
   p.send({ type: 'left', reason });
+  broadcastUserList();
 }
 
 function enqueue(client) {
@@ -401,6 +432,8 @@ function handlePayload(c, obj) {
     case 'report': return onReport(c);
     case 'block': return onBlock(c);
     case 'typing': return onTyping(c, obj);
+    case 'start_private': return onStartPrivate(c, obj);
+    case 'get_users': return c.send({ type: 'user_list', users: getPublicUserList() });
     case 'ping': return c.send({ type: 'pong', ts: Date.now() });
     default: return sendError(c, 'unknown_type', 'Unknown message type.');
   }
@@ -438,6 +471,7 @@ function onJoin(c, obj) {
   c.country = country;
   c.send({ type: 'joined', you: { nick, age, gender, lookingFor, lang, country } });
   enqueue(c);
+  broadcastUserList();
 }
 
 function onMessage(c, obj) {
@@ -462,6 +496,7 @@ function onLeave(c) {
   unpair(c, 'left');
   leaveQueue(c);
   c.send({ type: 'idle' });
+  broadcastUserList();
 }
 
 function onReport(c) {
@@ -493,6 +528,28 @@ function onTyping(c, obj) {
   if (Date.now() - c.lastTypeAt < 800) return; // throttle
   c.lastTypeAt = Date.now();
   c.partner.send({ type: 'typing', on: obj.on === true });
+}
+
+function onStartPrivate(c, obj) {
+  const targetId = Number(obj.targetId);
+  if (!targetId || targetId === c.id) return sendError(c, 'invalid_target', 'Cible invalide.');
+  let target = null;
+  for (const client of clients) {
+    if (client.id === targetId && client.alive) {
+      target = client;
+      break;
+    }
+  }
+  if (!target) return sendError(c, 'user_offline', 'Cet utilisateur n\'est plus connecté.');
+  if (target.blocked.has(c.id)) return sendError(c, 'blocked', 'Impossible de contacter cet utilisateur.');
+
+  // Unpair any active chats
+  unpair(c, 'new_chat');
+  leaveQueue(c);
+  unpair(target, 'new_chat');
+  leaveQueue(target);
+
+  pair(c, target);
 }
 
 // ---------------------------------------------------------------------------
