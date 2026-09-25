@@ -4,6 +4,13 @@
 # Projet : OpenChat v1.1.0 — alternative open-source a Chatiw
 # Dossier : C:\Users\jacob\projects\openchat
 # Serveur : Node.js SANS AUCUNE DEPENDANCE (node:http + crypto natifs)
+# ------------------------------------------------------------
+# URL PUBLIQUE EN LIGNE (25/09/2026 ~18h41, tant que le PC + cloudflared tournent) :
+#   https://cocktail-flashers-acne-cards.trycloudflare.com
+#   Sante : https://cocktail-flashers-acne-cards.trycloudflare.com/healthz (=200 OK verifie)
+#   WSS   : wss://cocktail-flashers-acne-cards.trycloudflare.com (=101 Switching Protocols verifie)
+#   Si l'URL change : relance start-public.bat, le nouveau lien s'affiche dans
+#   la console cloudflared + dans tunnel.log.
 # ============================================================
 
 ## 1. CE QUI A ETE FAIT (comme Chatiw + bugs corriges)
