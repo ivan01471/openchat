@@ -1,0 +1,24 @@
+{
+  "name": "openchat",
+  "version": "1.0.0",
+  "description": "Anonymous random chat — zero dependencies, no ads, moderated.",
+  "license": "MIT",
+  "main": "server.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/run.js",
+    "check": "node --check server.js && node --check public/app.js"
+  },
+  "dependencies": {},
+  "keywords": [
+    "chat",
+    "random-chat",
+    "websocket",
+    "anonymous",
+    "zero-dependency"
+  ]
+}

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="OpenChat — chat anonyme aléatoire gratuit, sans inscription, modéré. 16+">
+  <meta name="referrer" content="no-referrer">
+  <meta name="color-scheme" content="dark light">
+  <title>OpenChat — chat anonyme aléatoire</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" href="data:,">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="dot" aria-hidden="true"></span>
+      <span class="name">OpenChat</span>
+      <span class="badge">16+</span>
+    </div>
+    <div class="topbar-right">
+      <span class="online" id="onlineCount" title="Participants connectés">— en ligne</span>
+      <button type="button" class="btn btn-ghost" id="rulesBtn" aria-haspopup="dialog">Règles</button>
+      <button type="button" class="btn btn-ghost" id="themeBtn" aria-label="Basculer le thème">◐</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- ================= SETUP ================= -->
+    <section class="panel setup" id="setupPanel" aria-labelledby="setupTitle">
+      <h1 id="setupTitle">Discute avec un inconnu, en 10 secondes</h1>
+      <p class="lede">
+        Gratuit, anonyme, <strong>sans inscription</strong> et <strong>sans publicité</strong>.
+        Aucun message n'est conservé.
+      </p>
+
+      <form id="setupForm" novalidate>
+        <div class="grid">
+          <label class="field">
+            <span>Pseudo</span>
+            <input type="text" id="nick" name="nick" maxlength="24" autocomplete="off"
+                   placeholder="ex. : Léa" required>
+            <small class="hint" id="nickHint">2 à 24 caractères</small>
+          </label>
+
+          <label class="field">
+            <span>Âge</span>
+            <input type="number" id="age" name="age" min="16" max="99" inputmode="numeric"
+                   placeholder="16+" required>
+            <small class="hint">16 ans minimum — obligatoire</small>
+          </label>
+
+          <label class="field">
+            <span>Ton genre</span>
+            <select id="gender" name="gender">
+              <option value="any">Préfère ne pas dire</option>
+              <option value="female">Femme</option>
+              <option value="male">Homme</option>
+              <option value="other">Autre</option>
+            </select>
+            <small class="hint">Visible par ton interlocuteur</small>
+          </label>
+
+          <label class="field">
+            <span>Tu cherches</span>
+            <select id="lookingFor" name="lookingFor">
+              <option value="any">Indifférent</option>
+              <option value="female">Femme</option>
+              <option value="male">Homme</option>
+              <option value="other">Autre</option>
+            </select>
+            <small class="hint">Filtre de mise en relation</small>
+          </label>
+
+          <label class="field">
+            <span>Langue</span>
+            <select id="lang" name="lang">
+              <option value="any">Indifférent</option>
+              <option value="fr">Français</option>
+              <option value="en">English</option>
+              <option value="es">Español</option>
+              <option value="de">Deutsch</option>
+              <option value="it">Italiano</option>
+              <option value="pt">Português</option>
+              <option value="ar">العربية</option>
+            </select>
+          </label>
+        </div>
+
+        <label class="check">
+          <input type="checkbox" id="acceptRules" required>
+          <span>J'ai lu et j'accepte les <button type="button" class="link" id="rulesBtn2">règles de la
+            communauté</button>. Je confirme avoir au moins 16 ans.</span>
+        </label>
+
+        <p class="error" id="setupError" role="alert" hidden></p>
+
+        <button type="submit" class="btn btn-primary btn-lg" id="startBtn">Démarrer la recherche</button>
+      </form>
+
+      <ul class="trust">
+        <li>Aucune inscription</li>
+        <li>Aucun message enregistré</li>
+        <li>Bouton « Signaler » et « Bloquer » en 1 clic</li>
+        <li>Âge vérifié à la saisie + filtre anti-spam</li>
+      </ul>
+    </section>
+
+    <!-- ================= CHAT ================= -->
+    <section class="panel chat" id="chatPanel" hidden>
+      <div class="peer-bar">
+        <div class="peer" id="peerInfo">
+          <span class="peer-avatar" id="peerAvatar" aria-hidden="true">?</span>
+          <span class="peer-text">
+            <strong id="peerNick">Inconnu</strong>
+            <small id="peerMeta">en attente…</small>
+          </span>
+        </div>
+        <div class="peer-actions">
+          <button type="button" class="btn btn-warn" id="reportBtn" title="Signaler cet utilisateur">Signaler</button>
+          <button type="button" class="btn btn-ghost" id="blockBtn" title="Bloquer et changer">Bloquer</button>
+          <button type="button" class="btn btn-primary" id="nextBtn" title="Passer au suivant">Suivant</button>
+        </div>
+      </div>
+
+      <div class="messages" id="messages" role="log" aria-live="polite" aria-relevant="additions"></div>
+
+      <div class="typing" id="typing" hidden><span></span> écrit…</div>
+
+      <form class="composer" id="composerForm">
+        <input type="text" id="msgInput" autocomplete="off" maxlength="2000"
+               placeholder="Écris ton message…" aria-label="Message">
+        <button type="submit" class="btn btn-primary" id="sendBtn">Envoyer</button>
+        <button type="button" class="btn btn-ghost" id="stopBtn" title="Quitter la discussion">Quitter</button>
+      </form>
+    </section>
+
+    <!-- ================= RULES DIALOG ================= -->
+    <dialog id="rulesDialog" aria-labelledby="rulesTitle">
+      <h2 id="rulesTitle">Règles de la communauté</h2>
+      <ol class="rules">
+        <li><strong>16 ans minimum.</strong> Le signalement d'un mineur est traité en priorité.</li>
+        <li><strong>Aucun harcèlement</strong>, discrimination, menaces ou propos haineux.</li>
+        <li><strong>Aucun contenu illégal</strong> — notamment tout contenu impliquant des mineurs.
+            Ce type de contenu est signalé aux autorités compétentes.</li>
+        <li><strong>Pas de spam</strong>, publicité, arnaques ou liens malveillants.</li>
+        <li><strong>Respect du consentement</strong> : le refus de l'autre doit être immédiat.</li>
+        <li>Utilise le bouton <strong>Signaler</strong> plutôt que de répondre à un comportement abusif.</li>
+      </ol>
+      <p class="note">
+        Les messages ne sont <strong>pas conservés</strong>. Seules les adresses IP ayant enfreint ces règles
+        peuvent être bannies temporairement (10 minutes) afin de protéger les autres utilisateurs.
+      </p>
+      <form method="dialog"><button class="btn btn-primary">J'ai compris</button></form>
+    </dialog>
+  </main>
+
+  <footer class="foot">
+    <span>Projet open source — modération active — aucune publicité</span>
+  </footer>
+
+  <script src="/app.js" defer></script>
