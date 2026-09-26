@@ -10,7 +10,7 @@ const OPENCHAT_CONFIG = {
     // Aucun lien mort n'est jamais montré aux visiteurs.
     kofiUrl: '',            // ex. 'https://ko-fi.com/tonpseudo'   (versement PayPal/Stripe)
     paypalUrl: '',          // ex. 'https://paypal.me/tonpseudo'   (indisponible pour percevoir en Algérie)
-    payeerUrl: '',          // ex. 'https://payeer.com/045xxxxxxx' (FONCTIONNE depuis l'Algérie)
+    payeerUrl: 'https://payeer.online/guest-pay/22817d5f920a04b540b235a144b940205ccaf474bc1d44d80b2597f87550d7b4',
     vipPriceLabel: '2,99 €/mois',
   },
   crypto: {
