@@ -86,6 +86,58 @@ test/run.js, Dockerfile, docker-compose.yml, render.yaml, fly.toml,
 .github/workflows/deploy.yml, start-public.bat, TEST-MANUEL.txt, INFOS.txt (ce fichier).
 
 ## 7. DEPANNAGE EXPRESS
+
+## 8. MISE A JOUR v1.2.0 (26/09/2026) — AUDIENCE REELLE, SEO, MONETISATION SANS LIEN MORT
+### Ce qui a change dans le code
+- server.js : compteur d'audience reelle persistant (data/tallies.json) + endpoint public
+  GET /api/stats -> visiteurs du jour, vues du jour, vues totales, pic de connectes, uptime.
+  Seul un GET de la page de chat compte comme vue : /healthz, /api/* et les assets ne
+  gonflent JAMAIS le compteur. Vie privee : un visiteur = SHA-256(IP + jour) tronque,
+  non reversible, purge automatique de la veille. Aucun cookie, aucun traceur tiers.
+- server.js : /robots.txt et /sitemap.xml generes depuis le domaine reel de la requete
+  (plus jamais d'URL figee qui casse quand le tunnel change). /api/ est exclu du crawl.
+- public/config.js : PLUS AUCUN lien bidon (les faux ko-fi.com/openchat, paypalme/openchat
+  et REFERRALCODE=openchat ont ete supprimes). Champs vides par defaut, commentes.
+  Nouveaux blocs : site.canonicalUrl, crypto (USDT TRC20/BEP20, BTC), support.payeerUrl.
+  window.OPENCHAT_CONFIG est expose pour le client.
+- public/index.html : section SEO indexable + FAQ + donnees structurees JSON-LD
+  (WebSite + FAQPage), banniere de soutien pilotee par config, compteur d'audience.
+- public/app.js : module audience + soutien -> masque tout bouton sans URL reelle
+  (zero lien mort), bouton "Copier" pour les adresses crypto, polling /api/stats 30 s.
+- public/support.css : styles des nouveaux blocs (fichier ajoute).
+- start-public.bat : BUG CORRIGE -> tunnel lance sur http://127.0.0.1:3000 et non
+  "localhost" (qui se resolvait en IPv6 ::1 alors que Node ecoute en IPv4, ce qui
+  provoquait l'erreur Cloudflare 530 "origin unreachable").
+- Tests : 23 -> 27 tests, tous verts (4 nouveaux tests couvrent les endpoints ajoutes).
+
+### Verification faite le 26/09/2026 (resultats reels)
+- node --check OK sur server.js / app.js / config.js ; 27/27 tests OK.
+- Compteur verifie en direct : pageViewsToday 0 -> 2 apres 2 chargements, visitorsToday=1.
+- Site teste DEPUIS INTERNET (HTTPS) : /healthz 200, /api/stats 200, /sitemap.xml 200,
+  / 200 (14 685 octets, FAQ + JSON-LD + compteur presents).
+   -> https://pole-payments-causes-surgeons.trycloudflare.com   (URL EPHEMERE : elle
+      change a chaque relance de start-public.bat)
+
+### Comment la monetisation marche desormais
+- Tant que rien n'est configure dans public/config.js : AUCUN bouton ne s'affiche
+  (donc aucun lien mort, aucune credibilite perdue aupres des visiteurs).
+- Des que tu colles une vraie URL, le bouton apparait tout seul sur le site.
+- Canaux REALISABLES depuis l'Algerie : Payeer (support.payeerUrl) et crypto
+  (crypto.usdtTrc20 / usdtBep20 / btc -> bouton Copier, frais ~1 $ sur Tron).
+  PayPal : percevoir y est indisponible depuis l'Algerie -> ne pas compter dessus.
+- Affiliation VPN/hebergeur : a activer seulement avec un vrai code de parrainage.
+
+### Ce qui bloque encore les revenus (ce n'est PAS technique)
+1. LE TRAFIC. Un chat n'a de valeur qu'avec des utilisateurs. Le tunnel meurt des que ce
+   PC s'eteint, et Google n'indexe rien d'ephemere : il FAUT un hebergement permanent
+   gratuit (Render.com, compte gratuit) pour que le SEO demarre. Toute la partie technique
+   est deja prete (render.yaml fourni).
+2. L'ENCAISSEMENT. Il faut UN compte qui recoit l'argent (Payeer ou portefeuille crypto) :
+   creation + verification d'identite = toi uniquement, aucune IA ne peut le faire a ta place.
+3. Les reseaux publicitaires (AdSense/Ezoic) refusent en general les sites de chat anonyme,
+   ou exigent un volume eleve (Ezoic : ~10 000 visites/mois). A ne viser que plus tard, en
+   presentant les chiffres de /api/stats comme preuve d'audience.
+
 - "Impossible de se reconnecter" : F5,Vide le cache, verifie /healthz ; le bug est
   corrige mais un F5 force toujours un socket neuf.
 - Port 3000 occupe : netstat -ano | findstr :3000 puis Stop-Process -Id <pid>

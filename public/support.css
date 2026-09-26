@@ -1,0 +1,28 @@
+/* OpenChat — styles des blocs soutien / audience / contenu SEO.
+   Fichier séparé pour ne pas alourdir style.css historique. */
+
+[hidden] { display: none !important; }
+
+.monetize-crypto { display: grid; gap: 8px; margin: 12px 0 6px; }
+.crypto-row {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  font-size: 13px;
+}
+.crypto-row .crypto-label { font-weight: 600; opacity: .9; min-width: 104px; }
+.crypto-row code {
+  background: rgba(127, 127, 127, .18);
+  padding: 4px 8px; border-radius: 6px; word-break: break-all;
+  font-size: 12px;
+}
+
+.seo { max-width: 900px; margin: 36px auto 8px; padding: 0 18px; line-height: 1.65; }
+.seo h2 { font-size: 1.35rem; margin-bottom: 10px; }
+.seo h3 { font-size: 1.05rem; margin: 22px 0 8px; }
+.seo p { opacity: .92; }
+.seo-steps { margin: 0 0 4px 22px; }
+.seo-steps li { margin: 4px 0; }
+.seo-faq { margin: 0; }
+.seo-faq dt { font-weight: 600; margin-top: 14px; }
+.seo-faq dd { margin: 4px 0 0 0; opacity: .88; }
+
+.foot-audience { opacity: .75; margin-left: 8px; }

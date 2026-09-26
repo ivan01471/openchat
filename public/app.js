@@ -563,6 +563,132 @@ dom.msgInput.addEventListener('input', () => {
   if (state.phase !== 'chatting') return;
   if (!typingSent && dom.msgInput.value.length > 0) {
     typingSent = true;
+
+/* ===========================================================================
+ * Audience réelle + boutons de soutien (pilotés par public/config.js).
+ *
+ * Règles :
+ *  - seules les URLs réelles (http/https) sont rendues : aucun lien mort ;
+ *  - toute la carte de soutien est masquée si rien n'est configuré ;
+ *  - les adresses crypto sont copiables en un clic (reçues sans compte marchand) ;
+ *  - le compteur affiché vient du serveur (/api/stats), pas d'un chiffre inventé.
+ * =========================================================================== */
+(function audienceAndSupport() {
+  'use strict';
+
+  const cfg = (typeof window !== 'undefined' && window.OPENCHAT_CONFIG) || {};
+  const isHttp = (u) => typeof u === 'string' && /^https?:\/\//i.test(u.trim());
+
+  const card = document.getElementById('monetizeCard');
+  const actions = document.getElementById('supportActions');
+  const cryptoBox = document.getElementById('cryptoSupport');
+
+  // --- 1. Boutons de soutien / affiliation -------------------------------
+  const links = [
+    ['⭐ Devenir VIP (Ko-fi)', cfg.support && cfg.support.kofiUrl, 'btn-vip'],
+    ['💛 Faire un don PayPal', cfg.support && cfg.support.paypalUrl, 'btn-ghost'],
+    ['💛 Faire un don Payeer', cfg.support && cfg.support.payeerUrl, 'btn-ghost'],
+    ['🛡️ VPN partenaire', cfg.affiliate && cfg.affiliate.vpnUrl, 'btn-ghost'],
+    ['🚀 Hébergeur partenaire', cfg.affiliate && cfg.affiliate.hostingUrl, 'btn-ghost'],
+  ].filter(([, url]) => isHttp(url));
+
+  if (actions) {
+    for (const [label, url, cls] of links) {
+      const a = document.createElement('a');
+      a.href = url.trim();
+      a.textContent = label;
+      a.className = 'btn ' + cls;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      actions.appendChild(a);
+    }
+  }
+
+  // --- 2. Soutien en crypto (adresses copiables) -------------------------
+  const addrs = [
+    ['USDT · réseau Tron', cfg.crypto && cfg.crypto.usdtTrc20],
+    ['USDT · réseau BSC', cfg.crypto && cfg.crypto.usdtBep20],
+    ['Bitcoin', cfg.crypto && cfg.crypto.btc],
+  ].filter(([, v]) => typeof v === 'string' && v.trim().length > 8);
+
+  if (cryptoBox && addrs.length) {
+    cryptoBox.hidden = false;
+    if (cfg.crypto && cfg.crypto.note) {
+      const note = document.createElement('p');
+      note.className = 'monetize-note';
+      note.textContent = cfg.crypto.note;
+      cryptoBox.appendChild(note);
+    }
+    for (const [label, addr] of addrs) {
+      const row = document.createElement('div');
+      row.className = 'crypto-row';
+
+      const name = document.createElement('span');
+      name.className = 'crypto-label';
+      name.textContent = label;
+
+      const code = document.createElement('code');
+      code.textContent = addr.trim();
+
+      const copy = document.createElement('button');
+      copy.type = 'button';
+      copy.className = 'btn btn-ghost';
+      copy.textContent = 'Copier';
+      copy.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(addr.trim());
+          copy.textContent = 'Copié ✓';
+        } catch {
+          copy.textContent = 'Copie manuelle';
+        }
+        setTimeout(() => { copy.textContent = 'Copier'; }, 2500);
+      });
+
+      row.append(name, code, copy);
+      cryptoBox.appendChild(row);
+    }
+  }
+
+  // Rien de configuré : on ne montre pas une carte de soutien vide.
+  if (card && !links.length && !addrs.length) card.hidden = true;
+
+  // --- 3. Canonical / og:url quand un domaine définitif existe ------------
+  if (cfg.site && isHttp(cfg.site.canonicalUrl)) {
+    const url = cfg.site.canonicalUrl.trim();
+    if (!document.querySelector('link[rel="canonical"]')) {
+      const l = document.createElement('link');
+      l.rel = 'canonical';
+      l.href = url;
+      document.head.appendChild(l);
+    }
+    const m = document.querySelector('meta[property="og:url"]') || document.createElement('meta');
+    m.setAttribute('property', 'og:url');
+    m.setAttribute('content', url);
+    if (!m.parentNode) document.head.appendChild(m);
+  }
+
+  // --- 4. Compteur d'audience réel --------------------------------------
+  const setText = (id, txt) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = txt;
+  };
+
+  async function refreshAudience() {
+    try {
+      const res = await fetch('/api/stats', { cache: 'no-store' });
+      if (!res.ok) return;
+      const s = await res.json();
+      setText('audienceLine',
+        `📈 Aujourd'hui : ${s.visitorsToday || 0} visiteurs · ${s.pageViewsToday || 0} pages vues`);
+      setText('footAudience',
+        `${s.visitorsToday || 0} visiteurs aujourd'hui · ${s.pageViewsTotal || 0} vues au total`);
+    } catch { /* hors ligne : le compteur ne doit jamais bloquer le chat */ }
+  }
+
+  refreshAudience();
+  setInterval(refreshAudience, 30_000);
+})();
+
     send({ type: 'typing', on: true });
   }
   if (dom.msgInput.value.length === 0 && typingSent) {

@@ -35,6 +35,69 @@ const LIMITS = {
   BAN_MS: envInt('LIMIT_BAN_MS', 10 * 60_000),
 };
 
+// ---------------------------------------------------------------------------
+// Audience tallies — zero dependency, cookie-free, privacy-friendly.
+// A "page view" is a GET of the chat page. A "visitor" is a truncated
+// SHA-256 of the IP salted with the current day: not reversible, not
+// exportable, and the previous day is dropped from memory automatically.
+// Numbers are persisted so a restart (or a free-tier reboot) doesn't lose
+// the audience history that ad networks ask for.
+// ---------------------------------------------------------------------------
+const TALLIES_FILE = path.join(__dirname, 'data', 'tallies.json');
+const tallies = { total: 0, days: {}, uniques: {}, peakOnline: 0, since: Date.now() };
+
+function loadTallies() {
+  try {
+    const raw = JSON.parse(fs.readFileSync(TALLIES_FILE, 'utf8'));
+    if (raw && typeof raw === 'object') {
+      tallies.total = Number(raw.total) || 0;
+      tallies.days = raw.days && typeof raw.days === 'object' ? raw.days : {};
+      tallies.uniques = raw.uniques && typeof raw.uniques === 'object' ? raw.uniques : {};
+      tallies.peakOnline = Number(raw.peakOnline) || 0;
+    }
+  } catch { /* first boot, or unreadable volume: defaults are fine */ }
+}
+
+function saveTallies() {
+  try {
+    fs.mkdirSync(path.dirname(TALLIES_FILE), { recursive: true });
+    fs.writeFileSync(TALLIES_FILE, JSON.stringify(tallies), 'utf8');
+  } catch { /* a read-only volume must never take the chat down */ }
+}
+
+const dayKey = () => new Date().toISOString().slice(0, 10);
+
+function recordPageView(ip) {
+  const day = dayKey();
+  tallies.total++;
+  tallies.days[day] = (tallies.days[day] || 0) + 1;
+
+  const bucket = tallies.uniques[day] || (tallies.uniques[day] = []);
+  const hash = crypto.createHash('sha256').update(`${day}:${ip}`).digest('hex').slice(0, 12);
+  if (!bucket.includes(hash)) bucket.push(hash);
+
+  // Bounded memory: keep today only, and 60 days of raw view counts.
+  for (const k of Object.keys(tallies.uniques)) if (k !== day) delete tallies.uniques[k];
+  const keys = Object.keys(tallies.days).sort();
+  while (keys.length > 60) delete tallies.days[keys.shift()];
+}
+
+function audience() {
+  const day = dayKey();
+  return {
+    pageViewsToday: tallies.days[day] || 0,
+    pageViewsTotal: tallies.total,
+    visitorsToday: (tallies.uniques[day] || []).length,
+    peakOnline: tallies.peakOnline,
+    uptimeSeconds: Math.floor((Date.now() - tallies.since) / 1000),
+  };
+}
+
+loadTallies();
+setInterval(saveTallies, 30_000).unref();
+process.on('exit', saveTallies);
+
+
 const SECURITY_HEADERS = {
   'Content-Security-Policy':
     "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; " +
@@ -412,8 +475,10 @@ function stats() {
     if (c.partner) paired++;
     else if (c.queueSince) waiting++;
   }
+  if (clients.size > tallies.peakOnline) tallies.peakOnline = clients.size;
   return { connected: clients.size, waiting, pairs: Math.floor(paired / 2), banned: banned.size };
 }
+
 
 // ---------------------------------------------------------------------------
 // Message protocol (client -> server)
@@ -596,16 +661,60 @@ function serveStatic(req, res) {
 // HTTP + WebSocket upgrade
 // ---------------------------------------------------------------------------
 const server = http.createServer((req, res) => {
-  if (req.method === 'GET' && req.url === '/healthz') {
+  const urlPath = (req.url || '/').split('?')[0];
+  if (req.method === 'GET' && urlPath === '/healthz') {
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', ...SECURITY_HEADERS });
     return res.end(JSON.stringify(stats()));
+  }
+  // Public, cache-free audience endpoint powering the on-page visitor counter.
+  if (req.method === 'GET' && urlPath === '/api/stats') {
+    res.writeHead(200, {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store',
+      ...SECURITY_HEADERS,
+    });
+    return res.end(JSON.stringify({ ...stats(), ...audience() }));
+  }
+  // SEO: robots.txt and sitemap.xml are generated from the live host so they can
+  // never point at a stale domain (the tunnel URL changes, the Render URL won't).
+  const hostHeader = String(req.headers.host || 'localhost').replace(/[^A-Za-z0-9.:\-]/g, '');
+  const siteBase = `https://${hostHeader}`;
+  if (req.method === 'GET' && urlPath === '/robots.txt') {
+    res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', ...SECURITY_HEADERS });
+    return res.end([
+      'User-agent: *',
+      'Allow: /',
+      'Disallow: /api/',
+      '',
+      `Sitemap: ${siteBase}/sitemap.xml`,
+      '',
+    ].join('\n'));
+  }
+  if (req.method === 'GET' && urlPath === '/sitemap.xml') {
+    res.writeHead(200, { 'Content-Type': 'application/xml; charset=utf-8', ...SECURITY_HEADERS });
+    return res.end([
+      '<?xml version="1.0" encoding="UTF-8"?>',
+      '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+      '  <url>',
+      `    <loc>${siteBase}/</loc>`,
+      '    <changefreq>daily</changefreq>',
+      '    <priority>1.0</priority>',
+      '  </url>',
+      '</urlset>',
+      '',
+    ].join('\n'));
   }
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.writeHead(405, { Allow: 'GET, HEAD', ...SECURITY_HEADERS });
     return res.end('Method not allowed');
   }
+  // Count the chat page only: assets, /healthz and /api/stats never inflate the tally.
+  if (req.method === 'GET' && (urlPath === '/' || urlPath === '/index.html')) {
+    recordPageView(clientIp(req));
+  }
   serveStatic(req, res);
 });
+
 
 function clientIp(req) {
   // No reverse-proxy trust by default: use the socket address.

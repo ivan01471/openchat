@@ -26,4 +26,6 @@ start "OpenChat Server" /min node server.js
 timeout /t 2 >nul
 echo [OpenChat] Ouverture du tunnel public Cloudflare Quick Tunnel...
 echo [OpenChat] Ton URL publique https://...trycloudflare.com va s'afficher ci-dessous :
-cloudflared tunnel --url http://localhost:3000
+REM 127.0.0.1 est obligatoire : "localhost" peut resoudre en IPv6 (::1) alors que
+REM Node ecoute en IPv4, ce qui provoque une erreur Cloudflare 530 (origine HS).
+cloudflared tunnel --url http://127.0.0.1:3000

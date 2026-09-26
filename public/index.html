@@ -10,8 +10,48 @@
   <meta property="og:title" content="OpenChat — chat anonyme aléatoire gratuit">
   <meta property="og:description" content="Discute avec un inconnu en 10 secondes. Gratuit, anonyme, sans inscription, modéré. Liste en ligne par pays + historique de session.">
   <meta property="og:type" content="website">
-  <title>OpenChat — chat anonyme aléatoire</title>
+  <title>OpenChat — chat anonyme aléatoire, sans inscription</title>
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/support.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "name": "OpenChat",
+        "alternateName": "Chat anonyme sans inscription",
+        "description": "Chat anonyme aléatoire gratuit : discute avec un inconnu en 10 secondes, sans compte et sans inscription.",
+        "inLanguage": "fr"
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Faut-il créer un compte pour discuter sur OpenChat ?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Non. OpenChat est un chat anonyme : aucun compte, aucun email et aucune inscription ne sont demandés." }
+          },
+          {
+            "@type": "Question",
+            "name": "Les messages sont-ils enregistrés ?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Non. Les messages ne sont pas conservés sur le serveur et l'historique de la session disparaît dès que vous quittez le site." }
+          },
+          {
+            "@type": "Question",
+            "name": "Quel est l'âge minimum ?",
+            "acceptedAnswer": { "@type": "Answer", "text": "L'âge minimum est de 16 ans. Les comptes se présentant comme mineurs sont signalés et bannis." }
+          },
+          {
+            "@type": "Question",
+            "name": "OpenChat est-il gratuit ?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Oui, entièrement gratuit, sans publicité intrusive, et financé par les dons des utilisateurs." }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
   <link rel="icon" href="data:,">
   <link rel="manifest" href="/manifest.webmanifest">
 </head>
@@ -193,12 +233,12 @@
           deviens <strong>VIP Supporter (2,99 €/mois)</strong> : badge ⭐ + priorite de connexion.
           Tes dons paient l'hebergement.
         </p>
-        <div class="monetize-actions">
-          <a href="https://ko-fi.com/openchat" target="_blank" rel="noopener noreferrer" class="btn btn-vip">⭐ Devenir VIP — Ko-fi</a>
-          <a href="https://www.paypal.com/paypalme/openchat" target="_blank" rel="noopener noreferrer" class="btn btn-ghost">💛 Faire un don PayPal</a>
-          <a href="https://www.protonvpn.com/?ref=openchat" target="_blank" rel="noopener noreferrer" class="btn btn-ghost">🛡️ VPN partenaire</a>
+        <div class="monetize-actions" id="supportActions">
+          <!-- Rempli par app.js depuis public/config.js : un bouton sans URL réelle
+               n'est jamais affiché, donc aucun lien mort pour les visiteurs. -->
         </div>
-        <p class="monetize-note">Liens modifiables sans coder dans <code>public/config.js</code> (OPENCHAT_CONFIG). Espace display reserve pour Ezoic/Mediavine des 10k visites/mois.</p>
+        <div class="monetize-crypto" id="cryptoSupport" hidden></div>
+        <p class="monetize-note" id="audienceLine">Audience en direct…</p>
       </div>
     </section>
 
@@ -222,8 +262,48 @@
     </dialog>
   </main>
 
+  <!-- ================= CONTENU PUBLIC / SEO ================= -->
+  <section class="seo" aria-label="À propos d'OpenChat">
+    <h2>Chat anonyme gratuit, sans inscription</h2>
+    <p>
+      OpenChat met en relation deux personnes au hasard dans la francophonie. Tu choisis un
+      pseudo, ton âge (16 ans minimum) et ton pays : aucun compte, aucun email, aucun numéro
+      de téléphone. La discussion démarre en quelques secondes, et tu peux passer au
+      partenaire suivant d'un seul clic.
+    </p>
+
+    <h3>Comment ça marche ?</h3>
+    <ol class="seo-steps">
+      <li>Choisis ton pseudo, ton âge et tes préférences (pays, langue, genre recherché).</li>
+      <li>Clique sur « Démarrer » : tu entres dans la file d'attente.</li>
+      <li>Dès qu'un partenaire compatible est disponible, le chat privé s'ouvre automatiquement.</li>
+      <li>Un clic sur n'importe quel utilisateur de la liste en ligne ouvre une discussion directe.</li>
+    </ol>
+
+    <h3>Questions fréquentes</h3>
+    <dl class="seo-faq">
+      <dt>Faut-il créer un compte ?</dt>
+      <dd>Non : aucun compte, aucun email, aucune inscription. C'est un chat anonyme avant tout.</dd>
+
+      <dt>Les messages sont-ils enregistrés ?</dt>
+      <dd>Non. Rien n'est conservé sur le serveur, et l'historique de la session disparaît
+          quand tu quittes le site.</dd>
+
+      <dt>Quel est l'âge minimum ?</dt>
+      <dd>16 ans. Toute personne se présentant comme mineure est signalée et bannie.</dd>
+
+      <dt>Comment me protéger ?</dt>
+      <dd>N'échange jamais d'informations personnelles (adresse, téléphone, réseaux sociaux)
+          et utilise les boutons <strong>Signaler</strong> / <strong>Bloquer</strong> au moindre doute.</dd>
+
+      <dt>C'est vraiment gratuit ?</dt>
+      <dd>Oui, entièrement gratuit et sans publicité intrusive. Le projet vit grâce aux dons.</dd>
+    </dl>
+  </section>
+
   <footer class="foot">
-    <span>Projet open source — modération active — aucune publicité</span>
+    <span>Projet open source — modération active</span>
+    <span class="foot-audience" id="footAudience"></span>
   </footer>
 
   <script src="/config.js" defer></script>

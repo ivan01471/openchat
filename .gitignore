@@ -1,0 +1,12 @@
+# Runtime state — never commit: audience tallies, logs, tunnel data.
+data/
+*.log
+tunnel.log
+
+# Dependencies (the project itself has none, kept for safety).
+node_modules/
+
+# OS noise
+Thumbs.db
+desktop.ini
+.DS_Store

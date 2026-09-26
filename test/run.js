@@ -439,6 +439,55 @@ async function main() {
     a.destroy(); b.destroy();
   });
 
+  console.log('\nAudience & SEO endpoints');
+
+  await test('page views are counted and /api/stats reports a real audience', async () => {
+    const before = JSON.parse((await httpGet('/api/stats')).body);
+    assert(typeof before.pageViewsTotal === 'number', 'pageViewsTotal is a number');
+
+    const page = await httpGet('/');
+    assert(page.status === 200, `GET / should be 200, got ${page.status}`);
+    assert(page.body.includes('Chat anonyme'), 'home page carries the public SEO heading');
+
+    const after = JSON.parse((await httpGet('/api/stats')).body);
+    assert(after.pageViewsTotal === before.pageViewsTotal + 1,
+      `pageViewsTotal must grow by exactly 1 (${before.pageViewsTotal} -> ${after.pageViewsTotal})`);
+    assert(after.pageViewsToday === before.pageViewsToday + 1, 'pageViewsToday grows by 1');
+    assert(after.visitorsToday >= 1, 'visitorsToday counts at least this request');
+  });
+
+  await test('health probes and asset requests never inflate the audience tally', async () => {
+    const before = JSON.parse((await httpGet('/api/stats')).body);
+    await httpGet('/healthz');
+    await httpGet('/style.css');
+    await httpGet('/app.js');
+    await httpGet('/support.css');
+    const after = JSON.parse((await httpGet('/api/stats')).body);
+    assert(after.pageViewsTotal === before.pageViewsTotal,
+      `only the chat page counts as a page view (${before.pageViewsTotal} -> ${after.pageViewsTotal})`);
+  });
+
+  await test('robots.txt and sitemap.xml are generated for the live host', async () => {
+    const robots = await httpGet('/robots.txt');
+    assert(robots.status === 200, `robots.txt should be 200, got ${robots.status}`);
+    assert(/Sitemap: https?:\/\/[^\s]+\/sitemap\.xml/.test(robots.body),
+      'robots.txt must point at the sitemap');
+
+    const map = await httpGet('/sitemap.xml');
+    assert(map.status === 200, `sitemap.xml should be 200, got ${map.status}`);
+    assert(map.body.includes('<urlset'), 'sitemap.xml must be a urlset');
+    assert(map.body.includes('</loc>'), 'sitemap.xml must contain a location');
+  });
+
+  await test('shipped config carries no placeholder donation link', async () => {
+    const cfg = await httpGet('/config.js');
+    assert(cfg.status === 200, `config.js should be 200, got ${cfg.status}`);
+    assert(!/ko-fi\.com\/openchat|paypalme\/openchat|REFERRALCODE=openchat/.test(cfg.body),
+      'no fake monetisation URL may be shipped to visitors');
+    assert(cfg.body.includes('window.OPENCHAT_CONFIG'),
+      'config must be exposed for the client-side renderer');
+  });
+
   console.log('\nIsolated servers (ban + connection flood)');
 
   await test('reporting a partner bans their address', async () => {
