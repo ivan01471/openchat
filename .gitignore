@@ -18,8 +18,10 @@ desktop.ini
 # Outils locaux de deploiement (pas utiles aux visiteurs du depot)
 push_out.txt
 push_out2.txt
+push_out3.txt
 commit_err.txt
 push_repo.cmd
 push2.cmd
+push3.cmd
 deploy_openchat.py
 deploy.log

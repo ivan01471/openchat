@@ -35,10 +35,9 @@ const OPENCHAT_CONFIG = {
     scriptSrc: '',
   },
   site: {
-    // Domaine définitif (Render, Fly, ton nom de domaine...). Laissé vide tant que
-    // le site n'est joignable que par un tunnel éphémère : aucune balise canonical
-    // n'est alors injectée (une canonical fausse pénalise le référencement).
-    canonicalUrl: '',
+    // Domaine definitif. Renseigne = balise canonical + og:url injectees
+    // automatiquement (c'est ce qui fait indexer la bonne adresse par Google).
+    canonicalUrl: 'https://openchat-gut1.onrender.com',
   },
   affiliate: {
     // Programmes d'affiliation : colle TES liens de parrainage, sinon rien ne s'affiche.

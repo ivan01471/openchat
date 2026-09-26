@@ -564,6 +564,86 @@ dom.msgInput.addEventListener('input', () => {
   if (!typingSent && dom.msgInput.value.length > 0) {
     typingSent = true;
 
+
+    send({ type: 'typing', on: true });
+  }
+  if (dom.msgInput.value.length === 0 && typingSent) {
+    typingSent = false;
+    send({ type: 'typing', on: false });
+  }
+});
+
+dom.nextBtn.addEventListener('click', () => {
+  if (state.phase === 'idle') return;
+  typingSent = false;
+  setTyping(false);
+  if (!send({ type: 'next' })) {
+    addSystem('Connexion indisponible, reconnexion…', 'warn');
+    state.wantChat = state.wantChat || (state.phase !== 'idle');
+    connect();
+    return;
+  }
+  setPhase('searching');
+  clearMessages();
+  addSystem('Recherche d\'un nouvel interlocuteur…');
+});
+
+dom.stopBtn.addEventListener('click', () => {
+  typingSent = false;
+  state.wantChat = false;
+  try { send({ type: 'leave' }); } catch { /* ignore */ }
+  setPhase('idle');
+  clearMessages();
+  addSystem('Tu as quitté la discussion. L\'historique de session est effacé (comme Chatiw). Clique sur « Démarrer la recherche » pour te reconnecter.');
+});
+
+dom.reportBtn.addEventListener('click', () => {
+  if (state.phase !== 'chatting') return;
+  if (!window.confirm('Signaler cet interlocuteur ? Il sera immédiatement banni et tu seras mis en relation avec quelqu\'un d\'autre.')) return;
+  typingSent = false;
+  send({ type: 'report' });
+  setPhase('searching');
+  clearMessages();
+  addSystem('Signalement transmis. Recherche d\'un nouvel interlocuteur…', 'ok');
+});
+
+dom.blockBtn.addEventListener('click', () => {
+  if (state.phase !== 'chatting') return;
+  if (!window.confirm('Bloquer cet interlocuteur et changer ?')) return;
+  typingSent = false;
+  send({ type: 'block' });
+  setPhase('searching');
+  clearMessages();
+  addSystem('Interlocuteur bloqué. Recherche d\'un nouveau…', 'ok');
+});
+
+// ---------------------------------------------------------------------------
+// Init
+// ---------------------------------------------------------------------------
+(function restore() {
+  try {
+    const n = localStorage.getItem('oc-nick');
+    const a = localStorage.getItem('oc-age');
+    const c = localStorage.getItem('oc-country');
+    if (n) dom.nick.value = n;
+    if (a) dom.age.value = a;
+    if (c && dom.country) dom.country.value = c;
+  } catch { /* ignore */ }
+})();
+
+// Keep a lightweight connection alive so stats + instant start work.
+connect();
+
+// Refresh stats and user list periodically
+setInterval(() => {
+  if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+    send({ type: 'ping' });
+    send({ type: 'get_users' });
+  }
+}, 20000);
+
+
+
 /* ===========================================================================
  * Audience réelle + boutons de soutien (pilotés par public/config.js).
  *
@@ -650,7 +730,20 @@ dom.msgInput.addEventListener('input', () => {
   }
 
   // Rien de configuré : on ne montre pas une carte de soutien vide.
-  if (card && !links.length && !addrs.length) card.hidden = true;
+  // Marqueur public de diagnostic : permet de verifier depuis le navigateur (ou
+  // un test automatise) que le module de soutien/audience tourne bien en production.
+  window.__openchatSupport = {
+    module: 'openchat-support-1',
+    liensConfigures: links.length,
+    adressesCrypto: addrs.length,
+    carteMasquee: null,
+  };
+  if (card && !links.length && !addrs.length) {
+    card.hidden = true;
+    window.__openchatSupport.carteMasquee = true;
+  } else {
+    window.__openchatSupport.carteMasquee = false;
+  }
 
   // --- 3. Canonical / og:url quand un domaine définitif existe ------------
   if (cfg.site && isHttp(cfg.site.canonicalUrl)) {
@@ -688,82 +781,3 @@ dom.msgInput.addEventListener('input', () => {
   refreshAudience();
   setInterval(refreshAudience, 30_000);
 })();
-
-    send({ type: 'typing', on: true });
-  }
-  if (dom.msgInput.value.length === 0 && typingSent) {
-    typingSent = false;
-    send({ type: 'typing', on: false });
-  }
-});
-
-dom.nextBtn.addEventListener('click', () => {
-  if (state.phase === 'idle') return;
-  typingSent = false;
-  setTyping(false);
-  if (!send({ type: 'next' })) {
-    addSystem('Connexion indisponible, reconnexion…', 'warn');
-    state.wantChat = state.wantChat || (state.phase !== 'idle');
-    connect();
-    return;
-  }
-  setPhase('searching');
-  clearMessages();
-  addSystem('Recherche d\'un nouvel interlocuteur…');
-});
-
-dom.stopBtn.addEventListener('click', () => {
-  typingSent = false;
-  state.wantChat = false;
-  try { send({ type: 'leave' }); } catch { /* ignore */ }
-  setPhase('idle');
-  clearMessages();
-  addSystem('Tu as quitté la discussion. L\'historique de session est effacé (comme Chatiw). Clique sur « Démarrer la recherche » pour te reconnecter.');
-});
-
-dom.reportBtn.addEventListener('click', () => {
-  if (state.phase !== 'chatting') return;
-  if (!window.confirm('Signaler cet interlocuteur ? Il sera immédiatement banni et tu seras mis en relation avec quelqu\'un d\'autre.')) return;
-  typingSent = false;
-  send({ type: 'report' });
-  setPhase('searching');
-  clearMessages();
-  addSystem('Signalement transmis. Recherche d\'un nouvel interlocuteur…', 'ok');
-});
-
-dom.blockBtn.addEventListener('click', () => {
-  if (state.phase !== 'chatting') return;
-  if (!window.confirm('Bloquer cet interlocuteur et changer ?')) return;
-  typingSent = false;
-  send({ type: 'block' });
-  setPhase('searching');
-  clearMessages();
-  addSystem('Interlocuteur bloqué. Recherche d\'un nouveau…', 'ok');
-});
-
-// ---------------------------------------------------------------------------
-// Init
-// ---------------------------------------------------------------------------
-(function restore() {
-  try {
-    const n = localStorage.getItem('oc-nick');
-    const a = localStorage.getItem('oc-age');
-    const c = localStorage.getItem('oc-country');
-    if (n) dom.nick.value = n;
-    if (a) dom.age.value = a;
-    if (c && dom.country) dom.country.value = c;
-  } catch { /* ignore */ }
-})();
-
-// Keep a lightweight connection alive so stats + instant start work.
-connect();
-
-// Refresh stats and user list periodically
-setInterval(() => {
-  if (state.ws && state.ws.readyState === WebSocket.OPEN) {
-    send({ type: 'ping' });
-    send({ type: 'get_users' });
-  }
-}, 20000);
-
-
