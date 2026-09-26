@@ -1,20 +1,22 @@
-{
-  "$schema": "https://schema.render.com/render.yaml",
-  "services": [
-    {
-      "type": "web",
-      "name": "openchat",
-      "runtime": "node",
-      "plan": "free",
-      "buildCommand": "",
-      "startCommand": "node server.js",
-      "healthCheckPath": "/healthz",
-      "envVars": [
-        { "key": "NODE_ENV", "value": "production" },
-        { "key": "LIMIT_MIN_AGE", "value": 16 },
-        { "key": "LIMIT_CONN_PER_IP", "value": 30 },
-        { "key": "LIMIT_JOIN_PER_MIN", "value": 30 }
-      ]
-    }
-  ]
-}
+# Blueprint Render — OpenChat (offre gratuite).
+# Déploiement : Render > New + > Blueprint > sélectionne ce dépôt.
+# Le serveur n'a AUCUNE dépendance : pas d'étape de build nécessaire.
+services:
+  - type: web
+    name: openchat
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm install --omit=dev --no-audit --no-fund
+    startCommand: node server.js
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: LIMIT_MIN_AGE
+        value: "16"
+      - key: LIMIT_CONN_PER_IP
+        value: "30"
+      - key: LIMIT_JOIN_PER_MIN
+        value: "30"

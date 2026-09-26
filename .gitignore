@@ -10,3 +10,16 @@ node_modules/
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# Le jeton gh actuel n'a pas le scope "workflow" : ce fichier CI sera pousse
+# apres "gh auth refresh -h github.com -s workflow" (sinon GitHub rejette le push).
+.github/workflows/deploy.yml
+
+# Outils locaux de deploiement (pas utiles aux visiteurs du depot)
+push_out.txt
+push_out2.txt
+commit_err.txt
+push_repo.cmd
+push2.cmd
+deploy_openchat.py
+deploy.log
